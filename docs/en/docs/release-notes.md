@@ -7,6 +7,10 @@ hide:
 
 ## Latest Changes
 
+### Features
+
+* ✨ Add dependency concurrency limits with `Depends(max_concurrency=...)`. PR [#16746](https://github.com/fastapi/fastapi/pull/16746) by [@tiangolo](https://github.com/tiangolo).
+
 ## 0.162.7 (2026-11-13)
 
 ### Fixes
