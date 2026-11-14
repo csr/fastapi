@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Annotated
 
 from fastapi import FastAPI, Query
 
@@ -7,7 +7,7 @@ app = FastAPI()
 
 @app.get("/items/")
 async def read_items(
-    hidden_query: Union[str, None] = Query(default=None, include_in_schema=False)
+    hidden_query: Annotated[str | None, Query(include_in_schema=False)] = None,
 ):
     if hidden_query:
         return {"hidden_query": hidden_query}

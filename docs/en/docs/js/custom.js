@@ -1,25 +1,3 @@
-const div = document.querySelector('.github-topic-projects')
-
-async function getDataBatch(page) {
-    const response = await fetch(`https://api.github.com/search/repositories?q=topic:fastapi&per_page=100&page=${page}`, { headers: { Accept: 'application/vnd.github.mercy-preview+json' } })
-    const data = await response.json()
-    return data
-}
-
-async function getData() {
-    let page = 1
-    let data = []
-    let dataBatch = await getDataBatch(page)
-    data = data.concat(dataBatch.items)
-    const totalCount = dataBatch.total_count
-    while (data.length < totalCount) {
-        page += 1
-        dataBatch = await getDataBatch(page)
-        data = data.concat(dataBatch.items)
-    }
-    return data
-}
-
 function setupTermynal() {
     document.querySelectorAll(".use-termynal").forEach(node => {
         node.style.display = "block";
@@ -35,7 +13,7 @@ function setupTermynal() {
 
     function createTermynals() {
         document
-            .querySelectorAll(`.${termynalActivateClass} .highlight`)
+            .querySelectorAll(`.${termynalActivateClass} .highlight code`)
             .forEach(node => {
                 const text = node.textContent;
                 const lines = text.split("\n");
@@ -103,8 +81,14 @@ function setupTermynal() {
                     }
                 }
                 saveBuffer();
+                const inputCommands = useLines
+                    .filter(line => line.type === "input")
+                    .map(line => line.value)
+                    .join("\n");
+                node.textContent = inputCommands;
                 const div = document.createElement("div");
-                node.replaceWith(div);
+                node.style.display = "none";
+                node.after(div);
                 const termynal = new Termynal(div, {
                     lineData: useLines,
                     noInit: true,
@@ -147,7 +131,7 @@ async function showRandomAnnouncement(groupId, timeInterval) {
         children = shuffle(children)
         let index = 0
         const announceRandom = () => {
-            children.forEach((el, i) => {el.style.display = "none"});
+            children.forEach((el, i) => { el.style.display = "none" });
             children[index].style.display = "block"
             index = (index + 1) % children.length
         }
@@ -157,24 +141,143 @@ async function showRandomAnnouncement(groupId, timeInterval) {
     }
 }
 
-async function main() {
-    if (div) {
-        data = await getData()
-        div.innerHTML = '<ul></ul>'
-        const ul = document.querySelector('.github-topic-projects ul')
-        data.forEach(v => {
-            if (v.full_name === 'tiangolo/fastapi') {
-                return
-            }
-            const li = document.createElement('li')
-            li.innerHTML = `<a href="${v.html_url}" target="_blank">★ ${v.stargazers_count} - ${v.full_name}</a> by <a href="${v.owner.html_url}" target="_blank">@${v.owner.login}</a>`
-            ul.append(li)
-        })
-    }
+function handleSponsorImages() {
+    const announceRight = document.getElementById('announce-right');
+    if(!announceRight) return;
 
-    setupTermynal();
-    showRandomAnnouncement('announce-left', 5000)
-    showRandomAnnouncement('announce-right', 10000)
+    const sponsorImages = document.querySelectorAll('.sponsor-image');
+
+    const imagePromises = Array.from(sponsorImages).map(img => {
+        return new Promise((resolve, reject) => {
+            if (img.complete && img.naturalHeight !== 0) {
+                resolve();
+            } else {
+                img.addEventListener('load', () => {
+                    if (img.naturalHeight !== 0) {
+                        resolve();
+                    } else {
+                        reject();
+                    }
+                });
+                img.addEventListener('error', reject);
+            }
+        });
+    });
+
+    Promise.all(imagePromises)
+        .then(() => {
+            announceRight.style.display = 'block';
+            showRandomAnnouncement('announce-right', 10000);
+        })
+        .catch(() => {
+            // do nothing
+        });
 }
 
-main()
+function openLinksInNewTab() {
+    const siteUrl = document.querySelector("link[rel='canonical']")?.href
+        || window.location.origin;
+    const siteOrigin = new URL(siteUrl).origin;
+    document.querySelectorAll(".md-content a[href]").forEach(a => {
+        if (a.getAttribute("target") === "_self") return;
+        const href = a.getAttribute("href");
+        if (!href) return;
+        try {
+            const url = new URL(href, window.location.href);
+            // Skip same-page anchor links (only the hash differs)
+            if (url.origin === window.location.origin
+                && url.pathname === window.location.pathname
+                && url.search === window.location.search) return;
+            if (!a.hasAttribute("target")) {
+                a.setAttribute("target", "_blank");
+                a.setAttribute("rel", "noopener");
+            }
+            if (url.origin !== siteOrigin) {
+                a.dataset.externalLink = "";
+            } else {
+                a.dataset.internalLink = "";
+            }
+        } catch (_) {}
+    });
+}
+
+function setupOpinionsTabs() {
+    const root = document.querySelector('.fastapi-opinions');
+    if (!root) return;
+    const tabs = Array.from(root.querySelectorAll('[role="tab"]'));
+    const panels = Array.from(root.querySelectorAll('[role="tabpanel"]'));
+    if (!tabs.length) return;
+
+    function activate(tab, focus) {
+        tabs.forEach(t => {
+            const selected = t === tab;
+            t.setAttribute('aria-selected', selected ? 'true' : 'false');
+            t.setAttribute('tabindex', selected ? '0' : '-1');
+        });
+        const targetId = tab.getAttribute('aria-controls');
+        panels.forEach(p => {
+            if (p.id === targetId) p.removeAttribute('hidden');
+            else p.setAttribute('hidden', '');
+        });
+        if (focus) tab.focus();
+    }
+
+    tabs.forEach((tab, i) => {
+        tab.addEventListener('click', () => activate(tab, false));
+        tab.addEventListener('keydown', (e) => {
+            let next = null;
+            if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+            else if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
+            else if (e.key === 'Home') next = tabs[0];
+            else if (e.key === 'End') next = tabs[tabs.length - 1];
+            if (next) {
+                e.preventDefault();
+                activate(next, true);
+            }
+        });
+    });
+}
+
+let cleanupNewsletterEmbed = () => {};
+
+function setupNewsletterEmbed() {
+    cleanupNewsletterEmbed();
+    const frame = document.querySelector('.newsletter-embed');
+    if (!frame) return;
+    const origin = new URL(frame.src).origin;
+    const configure = () => frame.contentWindow.postMessage({
+        type: 'fastapi-newsletter:configure',
+        theme: document.body.dataset.mdColorScheme === 'slate' ? 'dark' : 'light',
+        fontSize: parseFloat(getComputedStyle(frame.parentElement).fontSize),
+    }, origin);
+    const resize = (event) => {
+        if (event.origin !== origin || event.source !== frame.contentWindow) return;
+        const { type, height } = event.data ?? {};
+        if (type !== 'fastapi-newsletter:resize' || !Number.isFinite(height) || height <= 0 || height > 2000) return;
+        frame.style.height = `${Math.ceil(height)}px`;
+    };
+    window.addEventListener('message', resize);
+    frame.addEventListener('load', configure);
+    window.addEventListener('resize', configure);
+    const themeObserver = new MutationObserver(configure);
+    themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-md-color-scheme'] });
+    configure();
+    cleanupNewsletterEmbed = () => {
+        window.removeEventListener('message', resize);
+        frame.removeEventListener('load', configure);
+        window.removeEventListener('resize', configure);
+        themeObserver.disconnect();
+    };
+}
+
+async function main() {
+    setupTermynal();
+    showRandomAnnouncement('announce-left', 5000)
+    handleSponsorImages();
+    openLinksInNewTab();
+    setupOpinionsTabs();
+    setupNewsletterEmbed();
+}
+document$.subscribe(() => {
+    main()
+})

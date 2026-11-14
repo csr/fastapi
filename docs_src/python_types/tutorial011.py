@@ -1,14 +1,13 @@
 from datetime import datetime
-from typing import List, Union
 
 from pydantic import BaseModel
 
 
 class User(BaseModel):
     id: int
-    name = "John Doe"
-    signup_ts: Union[datetime, None] = None
-    friends: List[int] = []
+    name: str = "John Doe"
+    signup_ts: datetime | None = None
+    friends: list[int] = []
 
 
 external_data = {

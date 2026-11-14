@@ -1,0 +1,152 @@
+---
+render_macros: false
+---
+
+# 模板 { #templates }
+
+你可以在 **FastAPI** 中使用任意你想要的模板引擎。
+
+常見的選擇是 Jinja2，與 Flask 與其他工具所使用的一樣。
+
+有一些工具可讓你輕鬆設定，並可直接在你的 **FastAPI** 應用程式中使用（由 Starlette 提供）。
+
+## 安裝相依套件 { #install-dependencies }
+
+將 `jinja2` 加入你的專案：
+
+<div class="termy">
+
+```console
+$ uv add jinja2
+
+---> 100%
+```
+
+</div>
+
+## 使用 `Jinja2Templates` { #using-jinja2templates }
+
+* 匯入 `Jinja2Templates`。
+* 建立一個可重複使用的 `templates` 物件。
+* 在會回傳模板的「*路徑操作（path operation）*」中宣告一個 `Request` 參數。
+* 使用你建立的 `templates` 來渲染並回傳 `TemplateResponse`，傳入模板名稱、`request` 物件，以及在 Jinja2 模板中使用的「context」鍵值對字典。
+
+{* ../../docs_src/templates/tutorial001.py hl[4,11,15:18] *}
+
+/// note
+
+在 FastAPI 0.108.0、Starlette 0.29.0 之前，`name` 是第一個參數。
+
+此外，在更早的版本中，`request` 物件是作為 context 的鍵值對之一傳給 Jinja2 的。
+
+///
+
+/// tip
+
+透過宣告 `response_class=HTMLResponse`，文件 UI 能夠知道回應將會是 HTML。
+
+///
+
+/// note | 技術細節
+
+你也可以使用 `from starlette.templating import Jinja2Templates`。
+
+**FastAPI** 以 `fastapi.templating` 的形式提供與 `starlette.templating` 相同的內容，僅為了方便你（開發者）。但大多數可用的回應類別都直接來自 Starlette，`Request` 與 `StaticFiles` 也是如此。
+
+///
+
+## 撰寫模板 { #writing-templates }
+
+接著你可以在 `templates/item.html` 編寫模板，例如：
+
+```jinja hl_lines="7"
+{!../../docs_src/templates/templates/item.html!}
+```
+
+### 模板 context 值 { #template-context-values }
+
+在包含以下內容的 HTML 中：
+
+```jinja
+Item ID: {{ id }}
+```
+
+...它會顯示你在傳入的 context `dict` 中提供的 `id`：
+
+```Python
+{"id": id}
+```
+
+例如，若 ID 為 `42`，會渲染為：
+
+```html
+Item ID: 42
+```
+
+### 模板 `url_for` 參數 { #template-url-for-arguments }
+
+你也可以在模板中使用 `url_for()`，它所接受的參數與你的「*路徑操作函式（path operation function）*」所使用的參數相同。
+
+因此，包含以下內容的區塊：
+
+```jinja
+<a href="{{ url_for('read_item', id=id) }}">
+```
+
+...會產生指向與「*路徑操作函式*」`read_item(id=id)` 相同 URL 的連結。
+
+`url_for()` 會根據目前的請求，回傳包含通訊協定與主機的絕對 URL。
+
+例如，若你的應用程式在 `https://example.com` 提供服務，且 ID 為 `42`，會渲染為：
+
+```html
+<a href="https://example.com/items/42">
+```
+
+### 模板中的 URL 路徑 { #url-paths-in-templates }
+
+對於指向同一網站的連結，你可以使用 `.path` 屬性來取得 URL 路徑，例如在 `templates/item_path.html` 中：
+
+```jinja hl_lines="4 7"
+{!../../docs_src/templates/templates/item_path.html!}
+```
+
+將模板名稱傳給 `TemplateResponse`：
+
+{* ../../docs_src/templates/tutorial002.py ln[14:18] hl[17] *}
+
+在相同的例子中，項目連結會渲染為：
+
+```html
+<a href="/items/42">
+```
+
+開頭的 `/` 表示此路徑是相對於目前網站的根目錄。
+
+`.path` 屬性不包含通訊協定、主機、查詢參數與片段識別碼。對於指向其他主機的連結，請使用完整的 URL。
+
+/// tip
+
+如果你的應用程式位於代理伺服器後方，請依照[位於代理伺服器後方](behind-a-proxy.md)的說明設定轉送標頭與 `root_path`。
+
+///
+
+## 模板與靜態檔案 { #templates-and-static-files }
+
+你也可以在模板中使用 `url_for()`，例如搭配你以 `name="static"` 掛載的 `StaticFiles` 使用。
+
+```jinja hl_lines="4"
+{!../../docs_src/templates/templates/item.html!}
+```
+
+在這個例子中，它會連結到 `static/styles.css` 的 CSS 檔案，內容為：
+
+```CSS hl_lines="4"
+{!../../docs_src/templates/static/styles.css!}
+```
+
+而且因為你使用了 `StaticFiles`，該 CSS 檔案會由你的 **FastAPI** 應用程式在 URL `/static/styles.css` 自動提供。
+
+## 更多細節 { #more-details }
+
+想了解更多細節（包含如何測試模板），請參考 [Starlette 的模板說明文件](https://starlette.dev/templates/)。

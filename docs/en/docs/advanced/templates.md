@@ -1,4 +1,8 @@
-# Templates
+---
+render_macros: false
+---
+
+# Templates { #templates }
 
 You can use any template engine you want with **FastAPI**.
 
@@ -6,72 +10,143 @@ A common choice is Jinja2, the same one used by Flask and other tools.
 
 There are utilities to configure it easily that you can use directly in your **FastAPI** application (provided by Starlette).
 
-## Install dependencies
+## Install dependencies { #install-dependencies }
 
-Install `jinja2`:
+Add `jinja2` to your project:
 
 <div class="termy">
 
 ```console
-$ pip install jinja2
+$ uv add jinja2
 
 ---> 100%
 ```
 
 </div>
 
-## Using `Jinja2Templates`
+## Using `Jinja2Templates` { #using-jinja2templates }
 
 * Import `Jinja2Templates`.
-* Create a `templates` object that you can re-use later.
+* Create a `templates` object that you can reuse later.
 * Declare a `Request` parameter in the *path operation* that will return a template.
-* Use the `templates` you created to render and return a `TemplateResponse`, passing the `request` as one of the key-value pairs in the Jinja2 "context".
+* Use the `templates` you created to render and return a `TemplateResponse`, pass the name of the template, the request object, and a "context" dictionary with key-value pairs to be used inside of the Jinja2 template.
 
-```Python hl_lines="4  11  15-16"
-{!../../../docs_src/templates/tutorial001.py!}
-```
+{* ../../docs_src/templates/tutorial001.py hl[4,11,15:18] *}
 
-!!! note
-    Notice that you have to pass the `request` as part of the key-value pairs in the context for Jinja2. So, you also have to declare it in your *path operation*.
+/// note
 
-!!! tip
-    By declaring `response_class=HTMLResponse` the docs UI will be able to know that the response will be HTML.
+Before FastAPI 0.108.0, Starlette 0.29.0, the `name` was the first parameter.
 
-!!! note "Technical Details"
-    You could also use `from starlette.templating import Jinja2Templates`.
+Also, before that, in previous versions, the `request` object was passed as part of the key-value pairs in the context for Jinja2.
 
-    **FastAPI** provides the same `starlette.templating` as `fastapi.templating` just as a convenience for you, the developer. But most of the available responses come directly from Starlette. The same with `Request` and `StaticFiles`.
+///
 
-## Writing templates
+/// tip
 
-Then you can write a template at `templates/item.html` with:
+By declaring `response_class=HTMLResponse` the docs UI will be able to know that the response will be HTML.
+
+///
+
+/// note | Technical Details
+
+You could also use `from starlette.templating import Jinja2Templates`.
+
+**FastAPI** provides the same `starlette.templating` as `fastapi.templating` just as a convenience for you, the developer. But most of the available responses come directly from Starlette. The same with `Request` and `StaticFiles`.
+
+///
+
+## Writing templates { #writing-templates }
+
+Then you can write a template at `templates/item.html` with, for example:
 
 ```jinja hl_lines="7"
-{!../../../docs_src/templates/templates/item.html!}
+{!../../docs_src/templates/templates/item.html!}
 ```
 
-It will show the `id` taken from the "context" `dict` you passed:
+### Template Context Values { #template-context-values }
+
+In the HTML that contains:
+
+```jinja
+Item ID: {{ id }}
+```
+
+...it will show the `id` taken from the "context" `dict` you passed:
 
 ```Python
-{"request": request, "id": id}
+{"id": id}
 ```
 
-## Templates and static files
+For example, with an ID of `42`, this would render:
 
-And you can also use `url_for()` inside of the template, and use it, for example, with the `StaticFiles` you mounted.
+```html
+Item ID: 42
+```
+
+### Template `url_for` Arguments { #template-url-for-arguments }
+
+You can also use `url_for()` inside of the template, it takes as arguments the same arguments that would be used by your *path operation function*.
+
+So, the section with:
+
+```jinja
+<a href="{{ url_for('read_item', id=id) }}">
+```
+
+...will generate a link to the same URL that would be handled by the *path operation function* `read_item(id=id)`.
+
+`url_for()` returns an absolute URL, including the scheme and host, based on the current request.
+
+For example, if your application is served at `https://example.com`, with an ID of `42`, this would render:
+
+```html
+<a href="https://example.com/items/42">
+```
+
+### URL paths in templates { #url-paths-in-templates }
+
+For links to the same site, you can use the `.path` attribute to get only the URL path, for example, in `templates/item_path.html`:
+
+```jinja hl_lines="4 7"
+{!../../docs_src/templates/templates/item_path.html!}
+```
+
+Pass the template's name to `TemplateResponse`:
+
+{* ../../docs_src/templates/tutorial002.py ln[14:18] hl[17] *}
+
+With the same example, the item link would render:
+
+```html
+<a href="/items/42">
+```
+
+The leading `/` makes this path relative to the root of the current site.
+
+The `.path` attribute excludes the scheme, host, query parameters, and fragment. Use the full URL for links to another host.
+
+/// tip
+
+If your application is behind a proxy, configure forwarded headers and `root_path` as described in [Behind a Proxy](behind-a-proxy.md).
+
+///
+
+## Templates and static files { #templates-and-static-files }
+
+You can also use `url_for()` inside of the template, and use it, for example, with the `StaticFiles` you mounted with the `name="static"`.
 
 ```jinja hl_lines="4"
-{!../../../docs_src/templates/templates/item.html!}
+{!../../docs_src/templates/templates/item.html!}
 ```
 
 In this example, it would link to a CSS file at `static/styles.css` with:
 
 ```CSS hl_lines="4"
-{!../../../docs_src/templates/static/styles.css!}
+{!../../docs_src/templates/static/styles.css!}
 ```
 
 And because you are using `StaticFiles`, that CSS file would be served automatically by your **FastAPI** application at the URL `/static/styles.css`.
 
-## More details
+## More details { #more-details }
 
-For more details, including how to test templates, check <a href="https://www.starlette.io/templates/" class="external-link" target="_blank">Starlette's docs on templates</a>.
+For more details, including how to test templates, check [Starlette's docs on templates](https://starlette.dev/templates/).

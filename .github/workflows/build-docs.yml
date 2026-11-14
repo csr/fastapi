@@ -4,49 +4,126 @@ on:
     branches:
       - master
   pull_request:
-    types: [opened, synchronize]
+permissions: {}
+
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    # Required permissions
+    permissions:
+      pull-requests: read
+    timeout-minutes: 5
+    # Set job outputs to values from filter step
+    outputs:
+      docs: ${{ steps.filter.outputs.docs }}
+    steps:
+    - uses: actions/checkout@v7.0.1
+      with:
+        persist-credentials: false
+    # For pull requests it's not necessary to checkout the code but for the main branch it is
+    - uses: dorny/paths-filter@v4.0.3
+      id: filter
+      with:
+        filters: |
+          docs:
+            - README.md
+            - docs/**
+            - docs_src/**
+            - pyproject.toml
+            - uv.lock
+            - .github/workflows/build-docs.yml
+            - .github/workflows/deploy-docs.yml
+            - scripts/docs.py
+  langs:
+    needs:
+      - changes
+    if: ${{ needs.changes.outputs.docs == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      langs: ${{ steps.show-langs.outputs.langs }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v7.1.0
+        with:
+          python-version-file: ".python-version"
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v10.3.2
+        with:
+          version: "latest-known"
+          enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+            uv.lock
+      - name: Install docs extras
+        run: uv sync --locked --no-dev --group docs
+      - name: Export Language Codes
+        id: show-langs
+        run: |
+          echo "langs=$(uv run ./scripts/docs.py langs-json)" >> $GITHUB_OUTPUT
+
   build-docs:
-    runs-on: ubuntu-18.04
+    needs:
+      - changes
+      - langs
+    if: ${{ needs.changes.outputs.docs == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    strategy:
+      matrix:
+        lang: ${{ fromJson(needs.langs.outputs.langs) }}
     steps:
       - name: Dump GitHub context
         env:
           GITHUB_CONTEXT: ${{ toJson(github) }}
         run: echo "$GITHUB_CONTEXT"
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v7.1.0
         with:
-          python-version: "3.7"
-      - uses: actions/cache@v2
-        id: cache
+          python-version-file: ".python-version"
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v10.3.2
         with:
-          path: ${{ env.pythonLocation }}
-          key: ${{ runner.os }}-python-docs-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml') }}-v03
-      - name: Install Flit
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: python3.7 -m pip install flit
+          version: "latest-known"
+          enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+            uv.lock
       - name: Install docs extras
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: python3.7 -m flit install --deps production --extras doc
-      - name: Install Material for MkDocs Insiders
-        if: ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false ) && steps.cache.outputs.cache-hit != 'true'
-        run: pip install git+https://${{ secrets.ACTIONS_TOKEN }}@github.com/squidfunk/mkdocs-material-insiders.git
+        run: uv sync --locked --no-dev --group docs
+      - name: Update Languages
+        run: uv run ./scripts/docs.py update-languages
       - name: Build Docs
-        run: python3.7 ./scripts/docs.py build-all
-      - name: Zip docs
-        run: bash ./scripts/zip-docs.sh
-      - uses: actions/upload-artifact@v2
+        run: | # zizmor: ignore[template-injection] - comes from trusted source
+          uv run ./scripts/docs.py build-lang ${{ matrix.lang }}
+      - uses: actions/upload-artifact@v7.0.2
         with:
-          name: docs-zip
-          path: ./docs.zip
-      - name: Deploy to Netlify
-        uses: nwtgck/actions-netlify@v1.1.5
+          name: docs-site-${{ matrix.lang }}
+          # English owns root static assets. Translated pages reference /img, /css,
+          # and /js, so omit duplicated language-local copies from artifacts.
+          path: |
+            ./site/**
+            !./site/${{ matrix.lang }}/img/**
+            !./site/${{ matrix.lang }}/css/**
+            !./site/${{ matrix.lang }}/js/**
+          include-hidden-files: true
+
+  # https://github.com/marketplace/actions/alls-green#why
+  docs-all-green:  # This job does nothing and is only used for the branch protection
+    if: always()
+    needs:
+      - langs
+      - build-docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@v1.3.0
         with:
-          publish-dir: './site'
-          production-branch: master
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          enable-commit-comment: false
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          jobs: ${{ toJSON(needs) }}
+          allowed-skips: langs, build-docs

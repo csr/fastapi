@@ -1,5 +1,3 @@
-from typing import List, Union
-
 from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
@@ -8,11 +6,11 @@ app = FastAPI()
 
 
 class Item(BaseModel):
-    name: Union[str, None] = None
-    description: Union[str, None] = None
-    price: Union[float, None] = None
+    name: str | None = None
+    description: str | None = None
+    price: float | None = None
     tax: float = 10.5
-    tags: List[str] = []
+    tags: list[str] = []
 
 
 items = {

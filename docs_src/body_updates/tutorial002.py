@@ -1,5 +1,3 @@
-from typing import List, Union
-
 from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
@@ -8,11 +6,11 @@ app = FastAPI()
 
 
 class Item(BaseModel):
-    name: Union[str, None] = None
-    description: Union[str, None] = None
-    price: Union[float, None] = None
+    name: str | None = None
+    description: str | None = None
+    price: float | None = None
     tax: float = 10.5
-    tags: List[str] = []
+    tags: list[str] = []
 
 
 items = {
@@ -27,11 +25,11 @@ async def read_item(item_id: str):
     return items[item_id]
 
 
-@app.patch("/items/{item_id}", response_model=Item)
-async def update_item(item_id: str, item: Item):
+@app.patch("/items/{item_id}")
+async def update_item(item_id: str, item: Item) -> Item:
     stored_item_data = items[item_id]
     stored_item_model = Item(**stored_item_data)
-    update_data = item.dict(exclude_unset=True)
-    updated_item = stored_item_model.copy(update=update_data)
+    update_data = item.model_dump(exclude_unset=True)
+    updated_item = stored_item_model.model_copy(update=update_data)
     items[item_id] = jsonable_encoder(updated_item)
     return updated_item

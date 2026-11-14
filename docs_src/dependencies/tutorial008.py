@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import Depends
 
 
@@ -9,7 +11,7 @@ async def dependency_a():
         dep_a.close()
 
 
-async def dependency_b(dep_a=Depends(dependency_a)):
+async def dependency_b(dep_a: Annotated[DepA, Depends(dependency_a)]):
     dep_b = generate_dep_b()
     try:
         yield dep_b
@@ -17,7 +19,7 @@ async def dependency_b(dep_a=Depends(dependency_a)):
         dep_b.close(dep_a)
 
 
-async def dependency_c(dep_b=Depends(dependency_b)):
+async def dependency_c(dep_b: Annotated[DepB, Depends(dependency_b)]):
     dep_c = generate_dep_c()
     try:
         yield dep_c

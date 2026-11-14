@@ -1,30 +1,39 @@
-# Static Files
+# Static Files { #static-files }
 
 You can serve static files automatically from a directory using `StaticFiles`.
 
-## Use `StaticFiles`
+/// tip
+
+If you need to host a frontend, use `app.frontend()` instead, read about it in [Frontend](frontend.md).
+
+`app.frontend()` uses `StaticFiles` underneath, with several additional advantages for frontends, like handling client-side routing.
+
+///
+
+## Use `StaticFiles` { #use-staticfiles }
 
 * Import `StaticFiles`.
 * "Mount" a `StaticFiles()` instance in a specific path.
 
-```Python hl_lines="2  6"
-{!../../../docs_src/static_files/tutorial001.py!}
-```
+{* ../../docs_src/static_files/tutorial001.py hl[2,6] *}
 
-!!! note "Technical Details"
-    You could also use `from starlette.staticfiles import StaticFiles`.
+/// note | Technical Details
 
-    **FastAPI** provides the same `starlette.staticfiles` as `fastapi.staticfiles` just as a convenience for you, the developer. But it actually comes directly from Starlette.
+You could also use `from starlette.staticfiles import StaticFiles`.
 
-### What is "Mounting"
+**FastAPI** provides the same `starlette.staticfiles` as `fastapi.staticfiles` just as a convenience for you, the developer. But it actually comes directly from Starlette.
+
+///
+
+### What is "Mounting" { #what-is-mounting }
 
 "Mounting" means adding a complete "independent" application in a specific path, that then takes care of handling all the sub-paths.
 
 This is different from using an `APIRouter` as a mounted application is completely independent. The OpenAPI and docs from your main application won't include anything from the mounted application, etc.
 
-You can read more about this in the **Advanced User Guide**.
+You can read more about this in the [Advanced User Guide](../advanced/index.md).
 
-## Details
+## Details { #details }
 
 The first `"/static"` refers to the sub-path this "sub-application" will be "mounted" on. So, any path that starts with `"/static"` will be handled by it.
 
@@ -32,8 +41,8 @@ The `directory="static"` refers to the name of the directory that contains your 
 
 The `name="static"` gives it a name that can be used internally by **FastAPI**.
 
-All these parameters can be different than "`static`", adjust them with the needs and specific details of your own application.
+All these parameters can be different than "`static`", adjust them to the needs and specific details of your own application.
 
-## More info
+## More info { #more-info }
 
-For more details and options check <a href="https://www.starlette.io/staticfiles/" class="external-link" target="_blank">Starlette's docs about Static Files</a>.
+For more details and options check [Starlette's docs about Static Files](https://starlette.dev/staticfiles/).

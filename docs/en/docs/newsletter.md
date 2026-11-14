@@ -1,5 +1,5 @@
 # FastAPI and friends newsletter
 
-<iframe class="mj-w-res-iframe" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://app.mailjet.com/widget/iframe/6gQ4/GDo" width="100%"></iframe>
+<iframe class="newsletter-embed" src="https://fastapiandfriends.com/embed/" width="100%" height="280"></iframe>
 
-<script type="text/javascript" src="https://app.mailjet.com/statics/js/iframeResizer.min.js"></script>
+[Read previous issues](https://fastapiandfriends.com/newsletter) or [subscribe on the FastAPI and friends website](https://fastapiandfriends.com/#subscribe).

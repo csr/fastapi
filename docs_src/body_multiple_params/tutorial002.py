@@ -1,5 +1,3 @@
-from typing import Union
-
 from fastapi import FastAPI
 from pydantic import BaseModel
 
@@ -8,14 +6,14 @@ app = FastAPI()
 
 class Item(BaseModel):
     name: str
-    description: Union[str, None] = None
+    description: str | None = None
     price: float
-    tax: Union[float, None] = None
+    tax: float | None = None
 
 
 class User(BaseModel):
     username: str
-    full_name: Union[str, None] = None
+    full_name: str | None = None
 
 
 @app.put("/items/{item_id}")

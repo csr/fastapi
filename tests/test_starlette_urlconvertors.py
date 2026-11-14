@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Path
+from fastapi import FastAPI, Path, Query
 from fastapi.testclient import TestClient
 
 app = FastAPI()
@@ -19,6 +19,11 @@ def path_convertor(param: str = Path()):
     return {"path": param}
 
 
+@app.get("/query/")
+def query_convertor(param: str = Query()):
+    return {"query": param}
+
+
 client = TestClient(app)
 
 
@@ -27,7 +32,7 @@ def test_route_converters_int():
     response = client.get("/int/5")
     assert response.status_code == 200, response.text
     assert response.json() == {"int": 5}
-    assert app.url_path_for("int_convertor", param=5) == "/int/5"  # type: ignore
+    assert app.url_path_for("int_convertor", param=5) == "/int/5"
 
 
 def test_route_converters_float():
@@ -35,7 +40,7 @@ def test_route_converters_float():
     response = client.get("/float/25.5")
     assert response.status_code == 200, response.text
     assert response.json() == {"float": 25.5}
-    assert app.url_path_for("float_convertor", param=25.5) == "/float/25.5"  # type: ignore
+    assert app.url_path_for("float_convertor", param=25.5) == "/float/25.5"
 
 
 def test_route_converters_path():
@@ -43,6 +48,13 @@ def test_route_converters_path():
     response = client.get("/path/some/example")
     assert response.status_code == 200, response.text
     assert response.json() == {"path": "some/example"}
+
+
+def test_route_converters_query():
+    # Test query conversion
+    response = client.get("/query", params={"param": "Qué tal!"})
+    assert response.status_code == 200, response.text
+    assert response.json() == {"query": "Qué tal!"}
 
 
 def test_url_path_for_path_convertor():
